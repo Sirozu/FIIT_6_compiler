@@ -1,17 +1,23 @@
-### AST-оптимизация заменой условного оператора на пустой оператор
+## AST-оптимизация заменой условного оператора на пустой оператор
 
-#### Постановка задачи
+### Постановка задачи
+
 Реализовать оптимизацию по AST дереву вида if (ex) null; else null; => null
 
-#### Команда
+### Команда
+
 Карякин В.В., Карякин Д.В.
 
-#### Зависимые и предшествующие задачи
-Предшествующие задачи:
-* построение AST дерева
-* базовые визиторы по AST дереву
+### Зависимые и предшествующие задачи
 
-#### Теоретическая часть
+Предшествующие:
+
+- Построение AST-дерева
+- Базовые визиторы
+- ChangeVisitor
+
+### Теоретическая часть
+
 Принцип работы данной оптимизации показан с помощью блок-схем, соответствующих некоторому поддереву абстрактного синтаксического дерева.
 
 Ниже приведена блок-схема, которая соответствует условному оператору с пустыми узлами по true и false ветке выполнения. Узел ```IfNode``` подлежит оптимизации.
@@ -23,7 +29,8 @@
 
 ![Узлы AСT после оптимизации](1_OptIfNullElseNull/img2.png)
 
-#### Практическая часть
+### Практическая часть
+
 Данная оптимизация реализована в виде визитора, унаследованного от класса ```ChangeVisitor```.
 В визиторе переопределяется метод ```PostVisit```, таким образом, чтобы при значении ```EmptyNode``` или ```null``` веток по true и false условного оператора данный узел абстрактного синтаксического дерева заменялся на ```EmptyNode``` с помощью метода ```ReplaceStat``` унаследованного от класса ```ChangeVisitor```.
 
@@ -34,23 +41,22 @@ public class IfNullElseNull : ChangeVisitor
 {
     public override void PostVisit(Node n)
     {
-        if (n is IfElseNode ifn)
+        if (n is IfElseNode ifn &&
+            (ifn.FalseStat is EmptyNode || ifn.FalseStat == null) &&
+            (ifn.TrueStat is EmptyNode || ifn.TrueStat == null))
         {
-            if ((ifn.FalseStat is EmptyNode || ifn.FalseStat == null)
-                && (ifn.TrueStat is EmptyNode || ifn.TrueStat == null))
-            {
-                ReplaceStat(ifn, new EmptyNode());
-            }
+            ReplaceStat(ifn, new EmptyNode());
         }
     }
 }
 ```
 
-#### Место в общем проекте (Интеграция)
+### Место в общем проекте (Интеграция)
+
 Данная оптимизация выполняется вместе с остальными оптимизациями по абстрактному синтаксическому дереву.
 ```csharp
 /* ASTOptimizer.cs */
-public static List<ChangeVisitor> Optimizations { get; } = new List<ChangeVisitor>
+private static IReadOnlyList<ChangeVisitor> ASTOptimizations { get; } = new List<ChangeVisitor>
 {
     /* ... */
     new IfNullElseNull(),
@@ -58,7 +64,8 @@ public static List<ChangeVisitor> Optimizations { get; } = new List<ChangeVisito
 };
 ```
 
-#### Тесты
+### Тесты
+
 Абстрактное синтаксическое дерево для данной оптимизации создаётся в тесте.
 Схема тестирования выглядит следующим образом: сначала создаётся AST, затем применяется оптимизация, после проверяется AST. Ниже приведёны несколько тестов.
 ```csharp

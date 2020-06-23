@@ -1,18 +1,19 @@
 ﻿using NUnit.Framework;
 using SimpleLang;
+using System.Linq;
 
 namespace SimpleLanguage.Tests.DataFlowAnalysis
 {
     [TestFixture]
-    internal class ConstPropagationTests : TACTestsBase
+    internal class ConstPropagationTests : OptimizationsTestBase
     {
         [Test]
         public void TestNoBlocks()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a,b,c;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             Assert.AreEqual(0, blocks.Count);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
@@ -24,52 +25,58 @@ var a,b,c;
         [Test]
         public void OneAssign()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a,b,c;
 a = 5;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["a"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual("5", InOut.OUT[blocks[0]]["a"].ConstValue);
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+            Assert.AreEqual("5", actual["a"].ConstValue);
         }
 
         [Test]
         public void VariableAndConst()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var u,p,v;
 u = 3;
 p = u + 2;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["u"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["p"].Type, LatticeTypeData.CONST);
+            var actual = InOut.OUT[blocks.Last()];
 
-            Assert.AreEqual("3", InOut.OUT[blocks[0]]["u"].ConstValue);
-            Assert.AreEqual("5", InOut.OUT[blocks[0]]["p"].ConstValue);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["u"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["p"].Type);
+
+            Assert.AreEqual("3", actual["u"].ConstValue);
+            Assert.AreEqual("5", actual["p"].ConstValue);
         }
 
         [Test]
         public void VariableAndConst2()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a,b,c;
 b = 3;
 goto 11;
 12: c = b + 2;
 11: a = 7;
 goto 12;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[1]]["b"].Type);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[1]]["a"].Type);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[1]]["c"].Type);
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.CONST, actual["b"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["c"].Type);
 
             Assert.AreEqual("3", InOut.OUT[blocks[1]]["b"].ConstValue);
             Assert.AreEqual("7", InOut.OUT[blocks[1]]["a"].ConstValue);
@@ -79,67 +86,72 @@ goto 12;
         [Test]
         public void VariableAndConst3()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a,b,c;
 b = 3;
 goto 11;
 c = b + 2;
 11: a = 7;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[2]]["b"].Type);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[2]]["a"].Type);
-            Assert.AreEqual(false, InOut.OUT[blocks[2]].ContainsKey("c"));
+            var actual = InOut.OUT[blocks.Last()];
 
-            Assert.AreEqual("3", InOut.OUT[blocks[2]]["b"].ConstValue);
-            Assert.AreEqual("7", InOut.OUT[blocks[2]]["a"].ConstValue);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["b"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+
+            Assert.AreEqual("3", actual["b"].ConstValue);
+            Assert.AreEqual("7", actual["a"].ConstValue);
         }
 
         [Test]
         public void ConstAndVariable()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a,b,c;
 b = 3;
 a = 2 * b;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["b"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["a"].Type, LatticeTypeData.CONST);
+            var actual = InOut.OUT[blocks.Last()];
 
-            Assert.AreEqual("3", InOut.OUT[blocks[0]]["b"].ConstValue);
-            Assert.AreEqual("6", InOut.OUT[blocks[0]]["a"].ConstValue);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["b"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+
+            Assert.AreEqual("3", actual["b"].ConstValue);
+            Assert.AreEqual("6", actual["a"].ConstValue);
         }
 
         [Test]
         public void ComplicatedEquation()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a,b,c;
 a = 2;
 b = 3;
 c = a * b - 2;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["a"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["b"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual(InOut.OUT[blocks[0]]["c"].Type, LatticeTypeData.CONST);
+            var actual = InOut.OUT[blocks.Last()];
 
-            Assert.AreEqual("2", InOut.OUT[blocks[0]]["a"].ConstValue);
-            Assert.AreEqual("3", InOut.OUT[blocks[0]]["b"].ConstValue);
-            Assert.AreEqual("4", InOut.OUT[blocks[0]]["c"].ConstValue);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["b"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["c"].Type);
+
+            Assert.AreEqual("2", actual["a"].ConstValue);
+            Assert.AreEqual("3", actual["b"].ConstValue);
+            Assert.AreEqual("4", actual["c"].ConstValue);
         }
 
         [Test]
         public void TransfNotDistr()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a,b,c;
 if c > 5
 {
@@ -152,33 +164,35 @@ else
     b = 2;
 }
 c = a + b;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             Assert.AreEqual(4, blocks.Count);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[3]]["a"].Type, LatticeTypeData.NAC);
-            Assert.AreEqual(InOut.OUT[blocks[3]]["b"].Type, LatticeTypeData.NAC);
-            Assert.AreEqual(InOut.OUT[blocks[3]]["c"].Type, LatticeTypeData.NAC);
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.NAC, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.NAC, actual["b"].Type);
+            Assert.AreEqual(LatticeTypeData.NAC, actual["c"].Type);
         }
 
         [Test]
         public void InputAssignsNAC()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, x, c;
 input(c);
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(LatticeTypeData.NAC, InOut.OUT[blocks[0]]["c"].Type);
+            Assert.AreEqual(LatticeTypeData.NAC, InOut.OUT[blocks.Last()]["c"].Type);
         }
 
         [Test]
         public void PropagateOneVariant()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, x, c;
 if c > 5
     x = 10;
@@ -186,20 +200,24 @@ else
     input(c);
 if c > 5
     a = x;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             Assert.AreEqual(7, blocks.Count);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[5]]["a"].Type);
-            Assert.AreEqual("10", InOut.OUT[blocks[5]]["a"].ConstValue);
-            Assert.AreEqual(LatticeTypeData.NAC, InOut.OUT[blocks[5]]["c"].Type);
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.NAC, actual["c"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["x"].Type);
+            Assert.AreEqual("10", actual["a"].ConstValue);
+            Assert.AreEqual("10", actual["x"].ConstValue);
         }
 
         [Test]
         public void TwoConstValues()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, x, c;
 input(c);
 if c > 5
@@ -209,54 +227,69 @@ else
 if c > 5
     x = 20;
 a = x;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(LatticeTypeData.NAC, InOut.OUT[blocks[6]]["a"].Type);
-            Assert.AreEqual(LatticeTypeData.NAC, InOut.OUT[blocks[6]]["x"].Type);
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.NAC, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.NAC, actual["x"].Type);
+            Assert.AreEqual(LatticeTypeData.NAC, actual["c"].Type);
         }
 
         [Test]
         public void PropagateTwoVariants()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, x, c;
 if c > 10
     x = 10;
 else
     a = 20;
 c = a + x;
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[3]]["c"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual(InOut.OUT[blocks[3]]["c"].ConstValue, "30");
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["x"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["c"].Type);
+
+            Assert.AreEqual("10", actual["x"].ConstValue);
+            Assert.AreEqual("20", actual["a"].ConstValue);
+            Assert.AreEqual("30", actual["c"].ConstValue);
         }
 
         [Test]
         public void PropagateTwoVariants2()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, x, c;
 x = 10;
 a = 20;
 goto 666;
 666: c = a + x;
-");
-
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[1]]["c"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual(InOut.OUT[blocks[1]]["c"].ConstValue, "30");
+            var actual = InOut.OUT[blocks.Last()];
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["x"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["c"].Type);
+
+            Assert.AreEqual("20", actual["a"].ConstValue);
+            Assert.AreEqual("30", actual["c"].ConstValue);
+            Assert.AreEqual("10", actual["x"].ConstValue);
         }
 
         [Test]
         public void WhileProp()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, b, x, c;
 while x > 1
 {
@@ -264,19 +297,21 @@ while x > 1
 	b = 5;
 }
 c = a + b;
-");
+";
 
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(InOut.OUT[blocks[3]]["c"].Type, LatticeTypeData.CONST);
-            Assert.AreEqual(InOut.OUT[blocks[3]]["c"].ConstValue, "7");
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.CONST, actual["c"].Type);
+            Assert.AreEqual("7", actual["c"].ConstValue);
         }
 
         [Test]
         public void ForProp()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, b, x, c;
 for x=1,10
 {
@@ -284,19 +319,21 @@ for x=1,10
 	b = 2;
 }
 c = a + b;
-");
+";
 
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[3]]["c"].Type);
-            Assert.AreEqual("4", InOut.OUT[blocks[3]]["c"].ConstValue);
+            var actual = InOut.OUT[blocks.Last()];
+
+            Assert.AreEqual(LatticeTypeData.CONST, actual["c"].Type);
+            Assert.AreEqual("4", actual["c"].ConstValue);
         }
 
         [Test]
         public void ForReverse()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, b, x, c, d;
 for x=1,2
 {
@@ -305,25 +342,27 @@ for x=1,2
     c = d;
     d = 5;
 }
-");
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
+";
+            var blocks = GenBlocks(program);
             var cfg = new ControlFlowGraph(blocks);
             var InOut = new ConstPropagation().ExecuteNonGeneric(cfg);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[3]]["a"].Type);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[3]]["b"].Type);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[3]]["c"].Type);
-            Assert.AreEqual(LatticeTypeData.CONST, InOut.OUT[blocks[3]]["d"].Type);
+            var actual = InOut.OUT[blocks.Last()];
 
-            Assert.AreEqual("5", InOut.OUT[blocks[3]]["a"].ConstValue);
-            Assert.AreEqual("5", InOut.OUT[blocks[3]]["b"].ConstValue);
-            Assert.AreEqual("5", InOut.OUT[blocks[3]]["c"].ConstValue);
-            Assert.AreEqual("5", InOut.OUT[blocks[3]]["d"].ConstValue);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["a"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["b"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["c"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual["d"].Type);
+
+            Assert.AreEqual("5", actual["a"].ConstValue);
+            Assert.AreEqual("5", actual["b"].ConstValue);
+            Assert.AreEqual("5", actual["c"].ConstValue);
+            Assert.AreEqual("5", actual["d"].ConstValue);
         }
 
         [Test]
         public void ConstPropagationIterativeTest()
         {
-            var TAC = GenTAC(@"
+            var program = @"
 var a, x, c;
 if c > 5
     x = 10;
@@ -331,18 +370,19 @@ else
     input(c);
 if c > 5
     a = x;
-");
-            var cfg = new ControlFlowGraph(BasicBlockLeader.DivideLeaderToLeader(TAC));
+";
+            var cfg = GenCFG(program);
             var constProp = new ConstPropagation();
             var result = constProp.Execute(cfg);
-
             var blocks = cfg.GetCurrentBasicBlocks();
+            var actual = result[blocks.Last()];
 
-            Assert.AreEqual(LatticeTypeData.CONST, result[blocks[6]].Out["x"].Type);
-            Assert.AreEqual("10", result[blocks[6]].Out["x"].ConstValue);
-            Assert.AreEqual(LatticeTypeData.CONST, result[blocks[6]].Out["a"].Type);
-            Assert.AreEqual("10", result[blocks[6]].Out["a"].ConstValue);
-            Assert.AreEqual(LatticeTypeData.NAC, result[blocks[6]].Out["c"].Type);
+            Assert.AreEqual(LatticeTypeData.NAC, actual.Out["c"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual.Out["x"].Type);
+            Assert.AreEqual(LatticeTypeData.CONST, actual.Out["a"].Type);
+
+            Assert.AreEqual("10", actual.Out["x"].ConstValue);
+            Assert.AreEqual("10", actual.Out["a"].ConstValue);
         }
 
     }

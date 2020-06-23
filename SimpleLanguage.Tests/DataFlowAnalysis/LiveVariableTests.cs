@@ -6,7 +6,7 @@ using SimpleLang;
 namespace SimpleLanguage.Tests.DataFlowAnalysis
 {
     [TestFixture]
-    internal class LiveVariableTests : TACTestsBase
+    internal class LiveVariableTests : OptimizationsTestBase
     {
         [Test]
         public void SimpleTest()
@@ -107,8 +107,7 @@ print (c+a+b);"
 
         private List<(HashSet<string> IN, HashSet<string> OUT)> Execute(List<Instruction> TAC)
         {
-            var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
-            var cfg = new ControlFlowGraph(blocks);
+            var cfg = GenCFG(TAC);
 
             var liveAct = new LiveVariableAnalysis();
             liveAct.ExecuteInternal(cfg);

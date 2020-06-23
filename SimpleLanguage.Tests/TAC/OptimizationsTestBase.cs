@@ -6,7 +6,7 @@ using SimpleScanner;
 
 namespace SimpleLanguage.Tests
 {
-    public class TACTestsBase
+    public class OptimizationsTestBase
     {
         protected List<Instruction> GenTAC(string sourceCode)
         {
@@ -23,5 +23,22 @@ namespace SimpleLanguage.Tests
             parser.root.Visit(threeAddrCodeVisitor);
             return threeAddrCodeVisitor.Instructions;
         }
+
+        protected List<BasicBlock> GenBlocks(string program)
+            => BasicBlockLeader.DivideLeaderToLeader(GenTAC(program));
+
+        protected ControlFlowGraph BuildTACOptimizeCFG(string program)
+        {
+            var TAC = GenTAC(program);
+            var optResult = ThreeAddressCodeOptimizer.OptimizeAll(TAC);
+            var blocks = BasicBlockLeader.DivideLeaderToLeader(optResult);
+            return new ControlFlowGraph(blocks);
+        }
+
+        protected ControlFlowGraph GenCFG(string program)
+            => new ControlFlowGraph(BasicBlockLeader.DivideLeaderToLeader(GenTAC(program)));
+
+        protected ControlFlowGraph GenCFG(List<Instruction> TAC)
+            => new ControlFlowGraph(BasicBlockLeader.DivideLeaderToLeader(TAC));
     }
 }
