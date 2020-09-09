@@ -57,25 +57,22 @@ public class OptExprMultDivByOne : ChangeVisitor
 
 ### Место в общем проекте (Интеграция)
 
-Данная оптимизация выполняется вместе с остальными АСТ оптимизациями после построения абстрактного синтаксического дерева, но до генерации трехадресного кода. 
+Данная оптимизация выполняется вместе с остальными АСТ оптимизациями после построения абстрактного синтаксического дерева, но до генерации трёхадресного кода. 
 
 ### Тесты
 
 ```csharp
-[Test]
-public void MultAndDivByLeftRightOne()
-{
-    var AST = BuildAST(@"
+[TestCase(@"
 var a, b;
 a = 1 * a * 1 + (1 * b / 1) * 1 / 1;
-");
-
-    var expected = new[] {
+",
+    ExpectedResult = new[]
+    {
         "var a, b;",
         "a = (a + b);"
-    };
+    },
+    TestName = "MultAndDivByLeftRightOne")]
 
-    var result = ApplyOpt(AST, new OptExprMultDivByOne());
-    CollectionAssert.AreEqual(expected, result);
-}
+public string[] TestOptExprMultDivByOne(string sourceCode) =>
+    TestASTOptimization(sourceCode, new OptExprMultDivByOne());
 ```

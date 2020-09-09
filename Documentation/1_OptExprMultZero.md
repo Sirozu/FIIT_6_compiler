@@ -22,7 +22,7 @@
 Данная оптимизация выполняется на AST - дереве, построенном для программы. Необходимо найти выражения, в которых происходит умножение на ноль и заменить, например, выражение типа a = b * 0 на a = 0.
 
 ### Практическая часть
-Оптимизация реализуется с применением паттерна Visitor, для этого созданный класс (реализующий оптимизацию) наследует `ChangeVisitor` и переопредеяет метод  `PostVisit`. 
+Оптимизация реализуется с применением паттерна Visitor, для этого созданный класс (реализующий оптимизацию) наследует `ChangeVisitor` и переопределяет метод  `PostVisit`. 
 
 ```csharp
 public class OptExprMultZero : ChangeVisitor
@@ -47,19 +47,17 @@ public class OptExprMultZero : ChangeVisitor
 ### Тесты
 
 ```csharp
-[Test]
-public void MultWithRightZero()
-{
-    var AST = BuildAST(@"
+[TestCase(@"
 var a, b;
-a = b * 0;
-");
-    var expected = new[] {
+a = 0 * b + b * a * 0 + 5;
+",
+    ExpectedResult = new[]
+    {
         "var a, b;",
-        "a = 0;"
-    };
+        "a = ((0 + 0) + 5);"
+    },
+    TestName = "MultWithRightLeftZero")]
 
-    var result = ApplyOpt(AST, new OptExprMultZero());
-    CollectionAssert.AreEqual(expected, result);
-}
+public string[] TestOptExprMultZero(string sourceCode) =>
+    TestASTOptimization(sourceCode, new OptExprMultZero());
 ```

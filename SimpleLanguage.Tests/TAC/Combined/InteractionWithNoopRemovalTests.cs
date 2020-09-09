@@ -19,22 +19,21 @@ namespace SimpleLanguage.Tests.TAC.Combined
         [Test]
         public void RemoveEmptyNodesShouldCleanUpAfterDeleteDeadCodeWithDeadVars()
         {
-            var TAC = GenTAC(
-            @"
-                var a, b, c;
-                a = 1;
-                a = 2;
-                b = 11;
-                b = 22;
-                a = 3;
-                a = b;
-                c = 1;
-                a = b + c;
-                b = -c;
-                c = 1;
-                b = a - c;
-                a = -b;
-                ");
+            var TAC = GenTAC(@"
+var a, b, c;
+a = 1;
+a = 2;
+b = 11;
+b = 22;
+a = 3;
+a = b;
+c = 1;
+a = b + c;
+b = -c;
+c = 1;
+b = a - c;
+a = -b;
+");
             var opts = new List<Optimization>()
             {
                 DeleteDeadCodeWithDeadVars.DeleteDeadCode,
@@ -61,12 +60,11 @@ namespace SimpleLanguage.Tests.TAC.Combined
         [Test]
         public void RemoveEmptyNodesShouldNotDeleteNoopAfterLastLoop()
         {
-            var TAC = GenTAC(
-                @"
-                var a, i;
-                for i = 1,5
-                    a = 10;
-                ");
+            var TAC = GenTAC(@"
+var a, i;
+for i = 1, 5
+    a = 10;
+");
             var opts = new List<Optimization>()
             {
                 ThreeAddressCodeRemoveNoop.RemoveEmptyNodes,
@@ -105,25 +103,14 @@ namespace SimpleLanguage.Tests.TAC.Combined
             AssertEquality(result, expected);
         }
 
-        [Test]
-        public void RemoveEmptyNodesWorksWithRemoveGotoThroughGoto()
-        {
-            var TAC = GenTAC(@"
+        [TestCase(@"
 var a;
-1:  if (1 < 2) 
+1:  if (1 < 2)
         a = 4 + 5 * 6;
     else
-        goto 4;");
-
-            var opts = new List<Optimization>()
-            {
-                ThreeAddressCodeRemoveGotoThroughGoto.RemoveGotoThroughGoto,
-                ThreeAddressCodeRemoveNoop.RemoveEmptyNodes
-            };
-
-            var result = ThreeAddressCodeOptimizer.Optimize(TAC, allCodeOptimizations: opts);
-
-            var expected = new List<string>
+        goto 4;
+",
+            ExpectedResult = new string[]
             {
                 "1: #t1 = 1 < 2",
                 "if #t1 goto L1",
@@ -133,43 +120,36 @@ var a;
                 "#t3 = 4 + #t2",
                 "a = #t3",
                 "L2: noop"
-            };
+            },
+            TestName = "RemoveEmptyNodesWorksWithRemoveGotoThroughGoto")]
 
-            AssertEquality(result, expected);
-        }
-
-        [Test]
-        public void RemoveGotoThroughGotoShouldNotRemoveExtraLabelsAfterRemoveEmptyNodes()
-        {
-            var TAC = GenTAC(@"
+        [TestCase(@"
 var a;
 input(a);
 1: if a == 0
     goto 3;
 2: a = 2;
 3: a = 3;
-");
-
-            var opts = new List<Optimization>()
-            {
-                ThreeAddressCodeRemoveGotoThroughGoto.RemoveGotoThroughGoto,
-                ThreeAddressCodeRemoveNoop.RemoveEmptyNodes
-            };
-
-            var result = ThreeAddressCodeOptimizer.Optimize(TAC, allCodeOptimizations: opts);
-
-            var expected = new List<string>
+",
+            ExpectedResult = new string[]
             {
                 "input a",
-                "1: #t1 = a == 0",
+                "1: #t1 = a != 0",
                 "#t2 = !#t1",
-                "#t3 = !#t2",
-                "if #t3 goto 3",
+                "if #t2 goto 3",
                 "2: a = 2",
                 "3: a = 3"
-            };
+            },
+            TestName = "RemoveGotoThroughGotoShouldNotRemoveExtraLabelsAfterRemoveEmptyNodes")]
 
-            AssertEquality(result, expected);
-        }
+        public IEnumerable<string> InteractionWithNoopRemoval(string sourceCode) =>
+            ThreeAddressCodeOptimizer.Optimize(
+                GenTAC(sourceCode),
+                allCodeOptimizations: new List<Optimization>()
+                {
+                    ThreeAddressCodeRemoveGotoThroughGoto.RemoveGotoThroughGoto,
+                    ThreeAddressCodeRemoveNoop.RemoveEmptyNodes
+                })
+            .Select(instruction => instruction.ToString());
     }
 }

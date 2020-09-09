@@ -1,8 +1,8 @@
-## AST-оптимизация замены if(true) на его true ветку
+## AST-оптимизация замены if (true) на его true ветку
 
 ### Постановка задачи
 
-Реализовать оптимизацию по AST дереву вида if(true) st1 else st2 => st1
+Реализовать оптимизацию по AST дереву вида if (true) st1 else st2 => st1
 
 ### Команда
 А. Татарова, Т. Шкуро, Д. Володин, Н. Моздоров
@@ -17,12 +17,12 @@
 
 ### Теоретическая часть
 
-Реализовать оптимизацию по AST дереву вида if(true) st1 else st2 => st1
+Реализовать оптимизацию по AST дереву вида if (true) st1 else st2 => st1
 
   * До
 
   ```csharp
-  if(true)
+  if (true)
     st1;
   else
     st2;
@@ -86,42 +86,39 @@ public static class ASTOptimizer
 
 ### Тесты
 
-В тестах проверяется, что данная оптимизация на месте условного оператора ```if(true)``` оставляет только true-ветку
+В тестах проверяется, что данная оптимизация на месте условного оператора `if (true)` оставляет только true-ветку
 ```csharp
-[Test]
-public void IfTrueComplexTest()
-{
-    var AST = BuildAST(@"
+[TestCase(@"
 var a, b;
 if true
 if true {
-a = b;
-b = 1;
+    a = b;
+    b = 1;
 }
 else
-a = 1;
+    a = 1;
 
 if a > b{
-a = b;
-if true{
-b = b + 1;
-b = b / 5;
+    a = b;
+    if true{
+        b = b + 1;
+        b = b / 5;
+    }
 }
-}
-");
-
-    var expected = new[] {
+",
+    ExpectedResult = new[]
+    {
         "var a, b;",
         "a = b;",
         "b = 1;",
         "if (a > b) {",
-        "  a = b;",
-        "  b = (b + 1);",
-        "  b = (b / 5);",
+        "    a = b;",
+        "    b = (b + 1);",
+        "    b = (b / 5);",
         "}"
-    };
+    },
+    TestName = "IfTrueComplex")]
 
-    var result = ApplyOpt(AST, new OptStatIfTrue());
-    CollectionAssert.AreEqual(expected, result);
-}
+public string[] TestOptStatIfTrue(string sourceCode) =>
+    TestASTOptimization(sourceCode, new OptStatIfTrue());
 ```

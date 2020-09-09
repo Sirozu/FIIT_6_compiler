@@ -7,28 +7,26 @@ using SimpleLang;
 namespace SimpleLanguage.Tests.CFG
 {
     [TestFixture]
-    internal class CFGdfs : OptimizationsTestBase
+    internal class CFGdfsTests : OptimizationsTestBase
     {
         [Test]
-        public void Test1()
+        public void Test()
         {
-            var program = @"
-var a, b, c, d, x, u, e,g, y,zz,i;
+            var cfg = GenCFG(@"
+var a, b, c, x, i;
 goto 200;
 200: a = 10 + 5;
-for i=2,7 
-	x = 1;
+for i = 2, 7
+    x = 1;
 if c > a
 {
-	a = 1;
+    a = 1;
 }
-else 
+else
 {
     b = 1;
 }
-";
-
-            var cfg = GenCFG(program);
+");
 
             foreach (var block in cfg.GetCurrentBasicBlocks())
             {
@@ -104,7 +102,8 @@ else
 
             Assert.AreEqual(check.Length - 1, cfg.DepthFirstSpanningTree.Count);
 
-            var ce = new List<(int from, int to, ControlFlowGraph.EdgeType type)>{
+            var ce = new List<(int from, int to, ControlFlowGraph.EdgeType type)>
+            {
                 (0, 1, ControlFlowGraph.EdgeType.Advancing),
                 (1, 2, ControlFlowGraph.EdgeType.Advancing),
                 (2, 3, ControlFlowGraph.EdgeType.Advancing),
@@ -116,7 +115,7 @@ else
                 (6, 8, ControlFlowGraph.EdgeType.Cross),
                 (3, 4, ControlFlowGraph.EdgeType.Advancing),
                 (4, 3, ControlFlowGraph.EdgeType.Retreating)
-                };
+            };
 
             Assert.AreEqual(ce.Count, cfg.ClassifiedEdges.Count);
             Assert.AreEqual(
@@ -133,10 +132,6 @@ else
             );
             Assert.IsTrue(ce.Find(x => x.from == 6 && x.to == 8).type == ControlFlowGraph.EdgeType.Cross);
             Assert.IsTrue(ce.Find(x => x.from == 4 && x.to == 3).type == ControlFlowGraph.EdgeType.Retreating);
-            foreach (var c in cfg.ClassifiedEdges)
-            {
-                Assert.Contains(c, ce);
-            }
             CollectionAssert.AreEqual(ce, cfg.ClassifiedEdges);
             Console.WriteLine("ClassifiedEdges");
             foreach (var c in cfg.ClassifiedEdges)

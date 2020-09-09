@@ -1,4 +1,4 @@
-### AST - оптимизация выражений, в которых есть суммирование с нулем
+## AST - оптимизация выражений, в которых есть суммирование с нулем
 
 ### Постановка задачи
 
@@ -21,11 +21,11 @@
 
 ### Теоретическая часть
 
-Данная оптимизация выполняется на AST - дереве, построенном для программы. Необходимо найти выражения, одним аргументом которого является 0, которые содержат бинарную оперцию "+", и заменить выражение типа a = b + 0 на a = b.
+Данная оптимизация выполняется на AST - дереве, построенном для программы. Необходимо найти выражения, одним аргументом которого является 0, которые содержат бинарную операцию "+", и заменить выражение типа a = b + 0 на a = b.
 
 ### Практическая часть
 
-Оптимизация реализуется с применением паттерна Visitor, для этого созданный класс (реализующий оптимизацию) наследует `ChangeVisitor` и переопредеяет метод  `PostVisit`. 
+Оптимизация реализуется с применением паттерна Visitor, для этого созданный класс (реализующий оптимизацию) наследует `ChangeVisitor` и переопределяет метод  `PostVisit`. 
 ```csharp
 public class OptExprSumZero : ChangeVisitor
 {
@@ -53,19 +53,17 @@ public class OptExprSumZero : ChangeVisitor
 ### Тесты
 
 ```csharp
-[Test]
-public void SumWithRightZero()
-{
-    var AST = BuildAST(@"
+[TestCase(@"
 var a, b;
-a = b + 0;
-");
-    var expected = new[] {
+a = 0 + (0 + b + b * a + 0);
+",
+    ExpectedResult = new[]
+    {
         "var a, b;",
-        "a = b;"
-    };
+        "a = (b + (b * a));"
+    },
+    TestName = "SumWithRightLeftZero")]
 
-    var result = ApplyOpt(AST, new OptExprSumZero());
-    CollectionAssert.AreEqual(expected, result);
-}
+public string[] TestOptExprSumZero(string sourceCode) =>
+    TestASTOptimization(sourceCode, new OptExprSumZero());
 ```

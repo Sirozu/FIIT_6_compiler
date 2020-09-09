@@ -1,4 +1,4 @@
-## AST-оптимизация замены while(false) st ветки на null
+## AST-оптимизация замены while (false) st ветки на null
 
 ### Постановка задачи
 
@@ -17,19 +17,19 @@
 
 ### Теоретическая часть
 
-Реализовать оптимизацию по AST дереву вида while(false) st -> null
+Реализовать оптимизацию по AST дереву вида while (false) st -> null
 
   * До
 
   ```csharp
-	while (false) 
-    	a = 5; 
+    while (false) 
+        a = 5; 
   ```
 
   * После
 
   ```csharp
-	null
+    null
   ```
 
 ### Практическая часть
@@ -86,37 +86,32 @@ public static void Optimize(Parser parser, IReadOnlyList<ChangeVisitor> Optimiza
 ### Тесты
 
 ```csharp
-[Test]
-public void TestShouldCreateNoop()
-{
-    var AST = BuildAST(@"var a;
+[TestCase(@"
+var a;
 while false
-a = true;");
-    var expected = new[] {
+    a = true;
+",
+    ExpectedResult = new[]
+    {
         "var a;"
-    };
+    },
+    TestName = "ShouldCreateNoop")]
 
-    var result = ApplyOpt(AST, new OptWhileFalseVisitor());
-    CollectionAssert.AreEqual(expected, result);
-}
-
-[Test]
-public void TestShouldNotCreateNoop()
-{
-
-    var AST = BuildAST(@"var a;
+[TestCase(@"
+var a;
 a = false;
 while a
-a = true;");
-
-    var expected = new[] {
+    a = true;
+",
+    ExpectedResult = new[]
+    {
         "var a;",
         "a = false;",
         "while a",
-        "  a = true;"
-    };
+        "    a = true;"
+    },
+    TestName = "ShouldNotCreateNoop")]
 
-    var result = ApplyOpt(AST, new OptWhileFalseVisitor());
-    CollectionAssert.AreEqual(expected, result);
-}
+public string[] TestOptWhileFalse(string sourceCode) =>
+    TestASTOptimization(sourceCode, new OptWhileFalseVisitor());
 ```

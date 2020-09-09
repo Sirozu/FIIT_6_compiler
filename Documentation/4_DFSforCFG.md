@@ -18,14 +18,14 @@
 ### Теоретическая часть
 Поиск в глубину — один из методов обхода графа. Стратегия поиска в глубину, как и следует из названия, состоит в том, чтобы идти «вглубь» графа, насколько это возможно. 
 
-Примение поиска в глубину на графе потока управления, начиная с входного блока, позволяет получить глубинное остовное дерево. Упорядочение узлов в глубину представляет собой обращенный обратный порядок обхода.
+Применение поиска в глубину на графе потока управления, начиная с входного блока, позволяет получить глубинное остовное дерево. Упорядочение узлов в глубину представляет собой обращенный обратный порядок обхода.
 
 ### Практическая часть
 
 ```csharp
 List<int> NLR; // прямой порядок обхода
 List<int> LRN; // обратный порядок обхода
-List<(int, int)> DFST; // список ребер глубинного оставного дерева
+List<(int, int)> DFST; // список рёбер глубинного остовного дерева
 List<int> DFN; // нумерация в глубину
 ```
 
@@ -52,34 +52,31 @@ dfs(0);
 ```
 
 ### Место в общем проекте (Интеграция)
-Используется в измененных итерационных алгоритмах для оптимальной скорости работы.
+Используется в изменённых итерационных алгоритмах для оптимальной скорости работы.
 
 ### Тесты
 Тест заключается в проверке корректности построений:
 
 - прямого и обратного обходов
 - упорядочения в глубину
-- глубинного оставного дерева
+- глубинного остовного дерева
 
 ```csharp
-var TAC = GenTAC(@"
-var a, b, c, d, x, u, e,g, y,zz,i;
+var cfg = GenCFG(@"
+var a, b, c, x, i;
 goto 200;
 200: a = 10 + 5;
-for i=2,7 
-	x = 1;
+for i = 2, 7
+    x = 1;
 if c > a
 {
-	a = 1;
+    a = 1;
 }
-else 
+else
 {
     b = 1;
 }
 ");
-
-var blocks = BasicBlockLeader.DivideLeaderToLeader(TAC);
-var cfg = new ControlFlowGraph(blocks);
 
 //            0
 //            ↓
@@ -89,37 +86,40 @@ var cfg = new ControlFlowGraph(blocks);
 //            ↓
 //        → → 3
 //        ↑  / \
-//        ← 5   4
+//        ← 4   \
 //              ↓
-//              6
+//              5
 //             / \
-//            8   7
+//            7   6
 //            ↓   ↓
-//            9 ← ←
+//            8 ← ←
 //            ↓
-//            10
+//            9
 
-var nlr = new List<int>() { 0, 1, 2, 3, 5, 4, 6, 8, 9, 10, 7 };
-CollectionAssert.AreEqual(nlr, cfg.NLR);
+var nlr = new List<int>() { 0, 1, 2, 3, 5, 7, 8, 9, 6, 4 };
+CollectionAssert.AreEqual(nlr, cfg.PreOrderNumeration);
 
-
-var lrn = new List<int>() { 5, 10, 9, 8, 7, 6, 4, 3, 2, 1, 0 };
-CollectionAssert.AreEqual(lrn, cfg.LRN);
+var lrn = new List<int>() { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+CollectionAssert.AreEqual(lrn, cfg.PostOrderNumeration);
 
 lrn.Reverse();
 
-for (int i = 0; i< lrn.Count; ++i)
-	Assert.AreEqual(cfg.DFN[lrn[i]], i);
+for (var i = 0; i < lrn.Count; ++i)
+{
+    Assert.AreEqual(cfg.DepthFirstNumeration[lrn[i]], i);
+}
 
 var check = new bool[cfg.GetCurrentBasicBlocks().Count];
-foreach ((var u, var v) in cfg.DFST)
+foreach ((var u, var v) in cfg.DepthFirstSpanningTree)
 {
-	check[u] = true;
-	check[v] = true;
+    check[u] = true;
+    check[v] = true;
 }
 
 foreach (var c in check)
-	Assert.IsTrue(c);
+{
+    Assert.IsTrue(c);
+}
 
-Assert.AreEqual(check.Length - 1, cfg.DFST.Count);
+Assert.AreEqual(check.Length - 1, cfg.DepthFirstSpanningTree.Count);
 ```

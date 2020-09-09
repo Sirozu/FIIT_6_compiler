@@ -49,7 +49,6 @@ public class OptExprVarEqualToItself : ChangeVisitor
 
 ### Тесты
 
-В ходе тестирования мы строим абстрактное дерево по исходному коду программы (`BuildAST(sourceCode)`), затем запускаем оптимизацию на этом дереве (`ApplyOpt`) и наконец сравниваем полученный результат с ожидаемым результатом `ExpectedResult`.
 ```csharp
 [TestCase(@"
 var a;
@@ -81,5 +80,6 @@ a = a >= a;
         "a = true;"
     },
     TestName = "EQGREATER")]
-public string[] TestOptimization(string sourceCode) => ApplyOpt(BuildAST(sourceCode), new OptExprVarEqualToItself());
+public string[] TestOptExprVarEqualToItself(string sourceCode) =>
+    TestASTOptimization(sourceCode, new OptExprVarEqualToItself());
 ```

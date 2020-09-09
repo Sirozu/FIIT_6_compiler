@@ -1,8 +1,8 @@
-## AST-оптимизация замены if(false) на его else ветку
+## AST-оптимизация замены if (false) на его else ветку
 
 ### Постановка задачи
 
-Реализовать оптимизацию по AST дереву вида if(false) st1 else st2 => st2
+Реализовать оптимизацию по AST дереву вида if (false) st1 else st2 => st2
 
 ### Команда
 
@@ -18,12 +18,12 @@
 
 ### Теоретическая часть
 
-Реализовать оптимизацию по AST дереву вида if(false) st1 else st2 => st2
+Реализовать оптимизацию по AST дереву вида if (false) st1 else st2 => st2
 
   * До
 
   ```csharp
-  if(false)
+  if (false)
     st1;
   else
     st2;
@@ -79,25 +79,22 @@ private static IReadOnlyList<ChangeVisitor> ASTOptimizations { get; } = new List
 В тестах проверяется работоспособность оптимизации и соответствие результатов:
 
 ```csharp
-[Test]
-public void IfFalseBlockTest()
-{
-    var AST = BuildAST(@"
+[TestCase(@"
 var a, b;
 if false {
-a = b;
-b = 1;
+    a = b;
+    b = 1;
 }
 else
-a = 1;
-");
-
-    var expected = new[] {
+    a = 1;
+",
+    ExpectedResult = new[]
+    {
         "var a, b;",
         "a = 1;"
-    };
+    },
+    TestName = "IfFalseBlock")]
 
-    var result = ApplyOpt(AST, new OptStatIfFalse());
-    CollectionAssert.AreEqual(expected, result);
-}
+public string[] TestOptStatIfFalse(string sourceCode) =>
+    TestASTOptimization(sourceCode, new OptStatIfFalse());
 ```
